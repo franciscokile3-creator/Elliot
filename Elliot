@@ -1,4 +1,4 @@
---// Elliot Script Custom UI with Character Aimbot Legit Mode //--
+--// Elliot Script Full //--
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -15,12 +15,14 @@ local activeMode = "Legit"
 local ScreenGui = Instance.new("ScreenGui", game.CoreGui)
 ScreenGui.Name = "ElliotUI"
 
+-- Main Frame
 local Frame = Instance.new("Frame", ScreenGui)
-Frame.Size = UDim2.new(0, 200, 0, 170)
+Frame.Size = UDim2.new(0, 200, 0, 210)
 Frame.Position = UDim2.new(0.35, 0, 0.35, 0)
 Frame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
 Frame.Active = true
 Frame.Draggable = true
+Frame.Visible = true
 
 local Title = Instance.new("TextLabel", Frame)
 Title.Size = UDim2.new(1,0,0,30)
@@ -29,14 +31,18 @@ Title.Text = "🍕 Elliot Menu"
 Title.TextColor3 = Color3.fromRGB(255,255,255)
 Title.TextScaled = true
 
+-- Close Button
 local CloseButton = Instance.new("TextButton", Frame)
 CloseButton.Size = UDim2.new(0,30,0,30)
 CloseButton.Position = UDim2.new(1,-30,0,0)
 CloseButton.Text = "X"
 CloseButton.BackgroundColor3 = Color3.fromRGB(150,0,0)
 CloseButton.TextColor3 = Color3.new(1,1,1)
+CloseButton.MouseButton1Click:Connect(function()
+    Frame.Visible = not Frame.Visible
+end)
 
--- Dropdown
+-- Mode Dropdown
 local DropButton = Instance.new("TextButton", Frame)
 DropButton.Size = UDim2.new(0.9,0,0,30)
 DropButton.Position = UDim2.new(0.05,0,0,40)
@@ -67,10 +73,58 @@ NotLegitOption.BackgroundColor3 = Color3.fromRGB(200,50,50)
 NotLegitOption.TextColor3 = Color3.fromRGB(255,255,255)
 NotLegitOption.TextScaled = true
 
+DropButton.MouseButton1Click:Connect(function()
+    OptionsFrame.Visible = not OptionsFrame.Visible
+end)
+LegitOption.MouseButton1Click:Connect(function()
+    activeMode = "Legit"
+    DropButton.Text = "Mode: Legit"
+    OptionsFrame.Visible = false
+end)
+NotLegitOption.MouseButton1Click:Connect(function()
+    activeMode = "Not Legit"
+    DropButton.Text = "Mode: Not Legit"
+    OptionsFrame.Visible = false
+end)
+
+-- Detection Range Dropdown
+local RangeDropButton = Instance.new("TextButton", Frame)
+RangeDropButton.Size = UDim2.new(0.9,0,0,30)
+RangeDropButton.Position = UDim2.new(0.05,0,0,100)
+RangeDropButton.Text = "Range: 15"
+RangeDropButton.BackgroundColor3 = Color3.fromRGB(100,100,200)
+RangeDropButton.TextColor3 = Color3.fromRGB(255,255,255)
+RangeDropButton.TextScaled = true
+
+local RangeOptionsFrame = Instance.new("Frame", Frame)
+RangeOptionsFrame.Size = UDim2.new(0.9,0,0,120)
+RangeOptionsFrame.Position = UDim2.new(0.05,0,0,130)
+RangeOptionsFrame.BackgroundColor3 = Color3.fromRGB(40,40,40)
+RangeOptionsFrame.Visible = false
+
+local ranges = {5,10,15,20,30}
+for i, val in ipairs(ranges) do
+    local option = Instance.new("TextButton", RangeOptionsFrame)
+    option.Size = UDim2.new(1,0,0,24)
+    option.Position = UDim2.new(0,0,0,(i-1)*24)
+    option.Text = tostring(val)
+    option.BackgroundColor3 = Color3.fromRGB(50,50,50)
+    option.TextColor3 = Color3.fromRGB(255,255,255)
+    option.TextScaled = true
+    option.MouseButton1Click:Connect(function()
+        detectionRange = val
+        RangeDropButton.Text = "Range: "..val
+        RangeOptionsFrame.Visible = false
+    end)
+end
+RangeDropButton.MouseButton1Click:Connect(function()
+    RangeOptionsFrame.Visible = not RangeOptionsFrame.Visible
+end)
+
 -- Trigger button
 local TriggerBtn = Instance.new("TextButton", Frame)
 TriggerBtn.Size = UDim2.new(0.9,0,0,30)
-TriggerBtn.Position = UDim2.new(0.05,0,0,135)
+TriggerBtn.Position = UDim2.new(0.05,0,0,180)
 TriggerBtn.Text = "Trigger"
 TriggerBtn.BackgroundColor3 = Color3.fromRGB(100,200,100)
 TriggerBtn.TextColor3 = Color3.fromRGB(0,0,0)
@@ -85,6 +139,19 @@ NotifyLabel.TextColor3 = Color3.fromRGB(255,255,0)
 NotifyLabel.TextScaled = true
 NotifyLabel.Text = ""
 NotifyLabel.TextStrokeTransparency = 0.5
+
+-- Open/Close UI Toggle Button
+local ToggleButton = Instance.new("TextButton", ScreenGui)
+ToggleButton.Size = UDim2.new(0, 80, 0, 30)
+ToggleButton.Position = UDim2.new(0.35, 0, 0.35, -35)
+ToggleButton.Text = "Open/Close"
+ToggleButton.BackgroundColor3 = Color3.fromRGB(50,50,50)
+ToggleButton.TextColor3 = Color3.fromRGB(255,255,255)
+ToggleButton.TextScaled = true
+
+ToggleButton.MouseButton1Click:Connect(function()
+    Frame.Visible = not Frame.Visible
+end)
 
 -- Functions
 local function showNotification(msg, duration)
@@ -142,12 +209,11 @@ local function legitAimbot(char)
             connection:Disconnect()
             return
         end
-        -- Smoothly move character toward target
         local direction = (targetRoot.Position - root.Position).Unit
         root.CFrame = CFrame.new(root.Position + direction * 0.5, targetRoot.Position)
     end)
 
-    task.wait(0.2) -- small delay to simulate legit aiming
+    task.wait(0.2)
     throwPizza()
     connection:Disconnect()
 end
@@ -180,31 +246,12 @@ local function triggerMode()
     lockOn(target, activeMode=="Not Legit" and 1 or nil)
 end
 
--- UI Events
-DropButton.MouseButton1Click:Connect(function()
-    OptionsFrame.Visible = not OptionsFrame.Visible
-end)
-LegitOption.MouseButton1Click:Connect(function()
-    activeMode = "Legit"
-    DropButton.Text = "Mode: Legit"
-    OptionsFrame.Visible = false
-end)
-NotLegitOption.MouseButton1Click:Connect(function()
-    activeMode = "Not Legit"
-    DropButton.Text = "Mode: Not Legit"
-    OptionsFrame.Visible = false
-end)
-TriggerBtn.MouseButton1Click:Connect(function()
-    triggerMode()
-end)
-CloseButton.MouseButton1Click:Connect(function()
-    Frame.Visible = not Frame.Visible
-end)
+-- Events
+TriggerBtn.MouseButton1Click:Connect(triggerMode)
 
--- Keybinds
 UIS.InputBegan:Connect(function(input,gp)
     if gp then return end
-    if input.KeyCode == Enum.KeyCode.Q or input.KeyCode == Enum.KeyCode.E then
+    if input.KeyCode == Enum.KeyCode.Q then
         triggerMode()
     end
 end)
