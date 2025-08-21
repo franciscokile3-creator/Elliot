@@ -1,0 +1,210 @@
+--// Elliot Script Custom UI with Character Aimbot Legit Mode //--
+
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local UIS = game:GetService("UserInputService")
+local RunService = game:GetService("RunService")
+local LocalPlayer = Players.LocalPlayer
+
+local Remote = ReplicatedStorage:WaitForChild("Modules"):WaitForChild("Network"):WaitForChild("RemoteEvent")
+local lastPosition = nil
+local detectionRange = 15
+local activeMode = "Legit"
+
+-- UI
+local ScreenGui = Instance.new("ScreenGui", game.CoreGui)
+ScreenGui.Name = "ElliotUI"
+
+local Frame = Instance.new("Frame", ScreenGui)
+Frame.Size = UDim2.new(0, 200, 0, 170)
+Frame.Position = UDim2.new(0.35, 0, 0.35, 0)
+Frame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+Frame.Active = true
+Frame.Draggable = true
+
+local Title = Instance.new("TextLabel", Frame)
+Title.Size = UDim2.new(1,0,0,30)
+Title.BackgroundColor3 = Color3.fromRGB(50,50,50)
+Title.Text = "🍕 Elliot Menu"
+Title.TextColor3 = Color3.fromRGB(255,255,255)
+Title.TextScaled = true
+
+local CloseButton = Instance.new("TextButton", Frame)
+CloseButton.Size = UDim2.new(0,30,0,30)
+CloseButton.Position = UDim2.new(1,-30,0,0)
+CloseButton.Text = "X"
+CloseButton.BackgroundColor3 = Color3.fromRGB(150,0,0)
+CloseButton.TextColor3 = Color3.new(1,1,1)
+
+-- Dropdown
+local DropButton = Instance.new("TextButton", Frame)
+DropButton.Size = UDim2.new(0.9,0,0,30)
+DropButton.Position = UDim2.new(0.05,0,0,40)
+DropButton.Text = "Mode: Legit"
+DropButton.BackgroundColor3 = Color3.fromRGB(0,100,200)
+DropButton.TextColor3 = Color3.fromRGB(255,255,255)
+DropButton.TextScaled = true
+
+local OptionsFrame = Instance.new("Frame", Frame)
+OptionsFrame.Size = UDim2.new(0.9,0,0,60)
+OptionsFrame.Position = UDim2.new(0.05,0,0,70)
+OptionsFrame.BackgroundColor3 = Color3.fromRGB(40,40,40)
+OptionsFrame.Visible = false
+
+local LegitOption = Instance.new("TextButton", OptionsFrame)
+LegitOption.Size = UDim2.new(1,0,0,30)
+LegitOption.Position = UDim2.new(0,0,0,0)
+LegitOption.Text = "Legit"
+LegitOption.BackgroundColor3 = Color3.fromRGB(0,100,200)
+LegitOption.TextColor3 = Color3.fromRGB(255,255,255)
+LegitOption.TextScaled = true
+
+local NotLegitOption = Instance.new("TextButton", OptionsFrame)
+NotLegitOption.Size = UDim2.new(1,0,0,30)
+NotLegitOption.Position = UDim2.new(0,0,0,30)
+NotLegitOption.Text = "Not Legit"
+NotLegitOption.BackgroundColor3 = Color3.fromRGB(200,50,50)
+NotLegitOption.TextColor3 = Color3.fromRGB(255,255,255)
+NotLegitOption.TextScaled = true
+
+-- Trigger button
+local TriggerBtn = Instance.new("TextButton", Frame)
+TriggerBtn.Size = UDim2.new(0.9,0,0,30)
+TriggerBtn.Position = UDim2.new(0.05,0,0,135)
+TriggerBtn.Text = "Trigger"
+TriggerBtn.BackgroundColor3 = Color3.fromRGB(100,200,100)
+TriggerBtn.TextColor3 = Color3.fromRGB(0,0,0)
+TriggerBtn.TextScaled = true
+
+-- Notification Label
+local NotifyLabel = Instance.new("TextLabel", Frame)
+NotifyLabel.Size = UDim2.new(1,0,0,20)
+NotifyLabel.Position = UDim2.new(0,0,0.75,0)
+NotifyLabel.BackgroundColor3 = Color3.fromRGB(25,25,25)
+NotifyLabel.TextColor3 = Color3.fromRGB(255,255,0)
+NotifyLabel.TextScaled = true
+NotifyLabel.Text = ""
+NotifyLabel.TextStrokeTransparency = 0.5
+
+-- Functions
+local function showNotification(msg, duration)
+    NotifyLabel.Text = msg
+    task.delay(duration or 1.5, function()
+        NotifyLabel.Text = ""
+    end)
+end
+
+local function throwPizza()
+    Remote:FireServer("UseActorAbility", "ThrowPizza")
+    showNotification("🍕 Pizza thrown!",1.5)
+end
+
+local function getTarget(rangeCheck)
+    local nearest = nil
+    local shortestDist = math.huge
+    for _, plr in ipairs(Players:GetPlayers()) do
+        if plr ~= LocalPlayer and plr.Character and plr.Character:FindFirstChild("Humanoid") then
+            local hum = plr.Character:FindFirstChild("Humanoid")
+            if hum.Health > 0 and hum.Health <= 20 then
+                if rangeCheck then
+                    local root = plr.Character:FindFirstChild("HumanoidRootPart")
+                    local myRoot = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+                    if root and myRoot then
+                        local dist = (root.Position - myRoot.Position).Magnitude
+                        if dist <= detectionRange and dist < shortestDist then
+                            shortestDist = dist
+                            nearest = plr.Character
+                        end
+                    end
+                else
+                    return plr.Character
+                end
+            end
+        end
+    end
+    return nearest
+end
+
+-- Legit Character Aimbot
+local function legitAimbot(char)
+    if not char or not char:FindFirstChild("HumanoidRootPart") then
+        showNotification("❌ No valid target found",1.5)
+        return
+    end
+    local root = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+    if not root then return end
+    lastPosition = root.CFrame
+
+    local targetRoot = char.HumanoidRootPart
+    local connection
+    connection = RunService.RenderStepped:Connect(function()
+        if not targetRoot or not root.Parent then
+            connection:Disconnect()
+            return
+        end
+        -- Smoothly move character toward target
+        local direction = (targetRoot.Position - root.Position).Unit
+        root.CFrame = CFrame.new(root.Position + direction * 0.5, targetRoot.Position)
+    end)
+
+    task.wait(0.2) -- small delay to simulate legit aiming
+    throwPizza()
+    connection:Disconnect()
+end
+
+local function lockOn(char, duration)
+    if activeMode == "Legit" then
+        legitAimbot(char)
+    else
+        if not char or not char:FindFirstChild("HumanoidRootPart") then
+            showNotification("❌ No valid target found",1.5)
+            return
+        end
+        local root = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+        if not root then return end
+        lastPosition = root.CFrame
+        root.CFrame = CFrame.new(char.HumanoidRootPart.Position + Vector3.new(0,0,2))
+        throwPizza()
+        if duration then
+            task.wait(duration)
+            if lastPosition then
+                root.CFrame = lastPosition
+            end
+        end
+    end
+end
+
+local function triggerMode()
+    local rangeCheck = (activeMode == "Legit")
+    local target = getTarget(rangeCheck)
+    lockOn(target, activeMode=="Not Legit" and 1 or nil)
+end
+
+-- UI Events
+DropButton.MouseButton1Click:Connect(function()
+    OptionsFrame.Visible = not OptionsFrame.Visible
+end)
+LegitOption.MouseButton1Click:Connect(function()
+    activeMode = "Legit"
+    DropButton.Text = "Mode: Legit"
+    OptionsFrame.Visible = false
+end)
+NotLegitOption.MouseButton1Click:Connect(function()
+    activeMode = "Not Legit"
+    DropButton.Text = "Mode: Not Legit"
+    OptionsFrame.Visible = false
+end)
+TriggerBtn.MouseButton1Click:Connect(function()
+    triggerMode()
+end)
+CloseButton.MouseButton1Click:Connect(function()
+    Frame.Visible = not Frame.Visible
+end)
+
+-- Keybinds
+UIS.InputBegan:Connect(function(input,gp)
+    if gp then return end
+    if input.KeyCode == Enum.KeyCode.Q or input.KeyCode == Enum.KeyCode.E then
+        triggerMode()
+    end
+end)
