@@ -1,257 +1,169 @@
---// Elliot Script Full //--
-
+--// Services
 local Players = game:GetService("Players")
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local UIS = game:GetService("UserInputService")
-local RunService = game:GetService("RunService")
 local LocalPlayer = Players.LocalPlayer
-
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Remote = ReplicatedStorage:WaitForChild("Modules"):WaitForChild("Network"):WaitForChild("RemoteEvent")
-local lastPosition = nil
-local detectionRange = 15
-local activeMode = "Legit"
+local HRP = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") or LocalPlayer.CharacterAdded:Wait():WaitForChild("HumanoidRootPart")
 
--- UI
-local ScreenGui = Instance.new("ScreenGui", game.CoreGui)
-ScreenGui.Name = "ElliotUI"
+--// Variables
+local Mode = "Legit"
+local Range = 15
+local LastPos = HRP.Position
+local ActiveNotifs = {}
+local MaxNotifs = 3
+local RangeOptions = {10,15,20,25,30}
 
--- Main Frame
-local Frame = Instance.new("Frame", ScreenGui)
-Frame.Size = UDim2.new(0, 200, 0, 210)
-Frame.Position = UDim2.new(0.35, 0, 0.35, 0)
-Frame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-Frame.Active = true
-Frame.Draggable = true
-Frame.Visible = true
-
-local Title = Instance.new("TextLabel", Frame)
-Title.Size = UDim2.new(1,0,0,30)
-Title.BackgroundColor3 = Color3.fromRGB(50,50,50)
-Title.Text = "🍕 Elliot Menu"
-Title.TextColor3 = Color3.fromRGB(255,255,255)
-Title.TextScaled = true
-
--- Close Button
-local CloseButton = Instance.new("TextButton", Frame)
-CloseButton.Size = UDim2.new(0,30,0,30)
-CloseButton.Position = UDim2.new(1,-30,0,0)
-CloseButton.Text = "X"
-CloseButton.BackgroundColor3 = Color3.fromRGB(150,0,0)
-CloseButton.TextColor3 = Color3.new(1,1,1)
-CloseButton.MouseButton1Click:Connect(function()
-    Frame.Visible = not Frame.Visible
-end)
-
--- Mode Dropdown
-local DropButton = Instance.new("TextButton", Frame)
-DropButton.Size = UDim2.new(0.9,0,0,30)
-DropButton.Position = UDim2.new(0.05,0,0,40)
-DropButton.Text = "Mode: Legit"
-DropButton.BackgroundColor3 = Color3.fromRGB(0,100,200)
-DropButton.TextColor3 = Color3.fromRGB(255,255,255)
-DropButton.TextScaled = true
-
-local OptionsFrame = Instance.new("Frame", Frame)
-OptionsFrame.Size = UDim2.new(0.9,0,0,60)
-OptionsFrame.Position = UDim2.new(0.05,0,0,70)
-OptionsFrame.BackgroundColor3 = Color3.fromRGB(40,40,40)
-OptionsFrame.Visible = false
-
-local LegitOption = Instance.new("TextButton", OptionsFrame)
-LegitOption.Size = UDim2.new(1,0,0,30)
-LegitOption.Position = UDim2.new(0,0,0,0)
-LegitOption.Text = "Legit"
-LegitOption.BackgroundColor3 = Color3.fromRGB(0,100,200)
-LegitOption.TextColor3 = Color3.fromRGB(255,255,255)
-LegitOption.TextScaled = true
-
-local NotLegitOption = Instance.new("TextButton", OptionsFrame)
-NotLegitOption.Size = UDim2.new(1,0,0,30)
-NotLegitOption.Position = UDim2.new(0,0,0,30)
-NotLegitOption.Text = "Not Legit"
-NotLegitOption.BackgroundColor3 = Color3.fromRGB(200,50,50)
-NotLegitOption.TextColor3 = Color3.fromRGB(255,255,255)
-NotLegitOption.TextScaled = true
-
-DropButton.MouseButton1Click:Connect(function()
-    OptionsFrame.Visible = not OptionsFrame.Visible
-end)
-LegitOption.MouseButton1Click:Connect(function()
-    activeMode = "Legit"
-    DropButton.Text = "Mode: Legit"
-    OptionsFrame.Visible = false
-end)
-NotLegitOption.MouseButton1Click:Connect(function()
-    activeMode = "Not Legit"
-    DropButton.Text = "Mode: Not Legit"
-    OptionsFrame.Visible = false
-end)
-
--- Detection Range Dropdown
-local RangeDropButton = Instance.new("TextButton", Frame)
-RangeDropButton.Size = UDim2.new(0.9,0,0,30)
-RangeDropButton.Position = UDim2.new(0.05,0,0,100)
-RangeDropButton.Text = "Range: 15"
-RangeDropButton.BackgroundColor3 = Color3.fromRGB(100,100,200)
-RangeDropButton.TextColor3 = Color3.fromRGB(255,255,255)
-RangeDropButton.TextScaled = true
-
-local RangeOptionsFrame = Instance.new("Frame", Frame)
-RangeOptionsFrame.Size = UDim2.new(0.9,0,0,120)
-RangeOptionsFrame.Position = UDim2.new(0.05,0,0,130)
-RangeOptionsFrame.BackgroundColor3 = Color3.fromRGB(40,40,40)
-RangeOptionsFrame.Visible = false
-
-local ranges = {5,10,15,20,30}
-for i, val in ipairs(ranges) do
-    local option = Instance.new("TextButton", RangeOptionsFrame)
-    option.Size = UDim2.new(1,0,0,24)
-    option.Position = UDim2.new(0,0,0,(i-1)*24)
-    option.Text = tostring(val)
-    option.BackgroundColor3 = Color3.fromRGB(50,50,50)
-    option.TextColor3 = Color3.fromRGB(255,255,255)
-    option.TextScaled = true
-    option.MouseButton1Click:Connect(function()
-        detectionRange = val
-        RangeDropButton.Text = "Range: "..val
-        RangeOptionsFrame.Visible = false
-    end)
-end
-RangeDropButton.MouseButton1Click:Connect(function()
-    RangeOptionsFrame.Visible = not RangeOptionsFrame.Visible
-end)
-
--- Trigger button
-local TriggerBtn = Instance.new("TextButton", Frame)
-TriggerBtn.Size = UDim2.new(0.9,0,0,30)
-TriggerBtn.Position = UDim2.new(0.05,0,0,180)
-TriggerBtn.Text = "Trigger"
-TriggerBtn.BackgroundColor3 = Color3.fromRGB(100,200,100)
-TriggerBtn.TextColor3 = Color3.fromRGB(0,0,0)
-TriggerBtn.TextScaled = true
-
--- Notification Label
-local NotifyLabel = Instance.new("TextLabel", Frame)
-NotifyLabel.Size = UDim2.new(1,0,0,20)
-NotifyLabel.Position = UDim2.new(0,0,0.75,0)
-NotifyLabel.BackgroundColor3 = Color3.fromRGB(25,25,25)
-NotifyLabel.TextColor3 = Color3.fromRGB(255,255,0)
-NotifyLabel.TextScaled = true
-NotifyLabel.Text = ""
-NotifyLabel.TextStrokeTransparency = 0.5
-
--- Open/Close UI Toggle Button
-local ToggleButton = Instance.new("TextButton", ScreenGui)
-ToggleButton.Size = UDim2.new(0, 80, 0, 30)
-ToggleButton.Position = UDim2.new(0.35, 0, 0.35, -35)
-ToggleButton.Text = "Open/Close"
-ToggleButton.BackgroundColor3 = Color3.fromRGB(50,50,50)
-ToggleButton.TextColor3 = Color3.fromRGB(255,255,255)
-ToggleButton.TextScaled = true
-
-ToggleButton.MouseButton1Click:Connect(function()
-    Frame.Visible = not Frame.Visible
-end)
-
--- Functions
-local function showNotification(msg, duration)
-    NotifyLabel.Text = msg
-    task.delay(duration or 1.5, function()
-        NotifyLabel.Text = ""
-    end)
-end
-
-local function throwPizza()
-    Remote:FireServer("UseActorAbility", "ThrowPizza")
-    showNotification("🍕 Pizza thrown!",1.5)
-end
-
-local function getTarget(rangeCheck)
-    local nearest = nil
-    local shortestDist = math.huge
-    for _, plr in ipairs(Players:GetPlayers()) do
-        if plr ~= LocalPlayer and plr.Character and plr.Character:FindFirstChild("Humanoid") then
-            local hum = plr.Character:FindFirstChild("Humanoid")
-            if hum.Health > 0 and hum.Health <= 20 then
-                if rangeCheck then
-                    local root = plr.Character:FindFirstChild("HumanoidRootPart")
-                    local myRoot = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
-                    if root and myRoot then
-                        local dist = (root.Position - myRoot.Position).Magnitude
-                        if dist <= detectionRange and dist < shortestDist then
-                            shortestDist = dist
-                            nearest = plr.Character
-                        end
-                    end
-                else
-                    return plr.Character
+--// Functions
+local function GetNearestTarget(maxRange)
+    local closest, dist = nil, maxRange
+    for _, plr in pairs(Players:GetPlayers()) do
+        if plr ~= LocalPlayer and plr.Character and plr.Character:FindFirstChild("HumanoidRootPart") then
+            local hum = plr.Character:FindFirstChildOfClass("Humanoid")
+            if hum and hum.Health > 0 and hum.Health <= 20 then
+                local mag = (plr.Character.HumanoidRootPart.Position - HRP.Position).Magnitude
+                if mag < dist then
+                    dist = mag
+                    closest = plr.Character
                 end
             end
         end
     end
-    return nearest
+    return closest
 end
 
--- Legit Character Aimbot
-local function legitAimbot(char)
-    if not char or not char:FindFirstChild("HumanoidRootPart") then
-        showNotification("❌ No valid target found",1.5)
-        return
-    end
-    local root = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
-    if not root then return end
-    lastPosition = root.CFrame
+local function ThrowPizza(target)
+    if target then
+        Remote:FireServer("UseActorAbility", "ThrowPizza", target.HumanoidRootPart.Position)
+        -- Badge Notification
+        local sound = Instance.new("Sound")
+        sound.SoundId = "rbxassetid://138087103"
+        sound.Volume = 1
+        sound.Parent = game:GetService("SoundService")
+        sound:Play()
+        task.delay(2,function() sound:Destroy() end)
 
-    local targetRoot = char.HumanoidRootPart
-    local connection
-    connection = RunService.RenderStepped:Connect(function()
-        if not targetRoot or not root.Parent then
-            connection:Disconnect()
-            return
-        end
-        local direction = (targetRoot.Position - root.Position).Unit
-        root.CFrame = CFrame.new(root.Position + direction * 0.5, targetRoot.Position)
-    end)
-
-    task.wait(0.2)
-    throwPizza()
-    connection:Disconnect()
-end
-
-local function lockOn(char, duration)
-    if activeMode == "Legit" then
-        legitAimbot(char)
-    else
-        if not char or not char:FindFirstChild("HumanoidRootPart") then
-            showNotification("❌ No valid target found",1.5)
-            return
-        end
-        local root = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
-        if not root then return end
-        lastPosition = root.CFrame
-        root.CFrame = CFrame.new(char.HumanoidRootPart.Position + Vector3.new(0,0,2))
-        throwPizza()
-        if duration then
-            task.wait(duration)
-            if lastPosition then
-                root.CFrame = lastPosition
+        if #ActiveNotifs >= MaxNotifs then
+            local oldest = table.remove(ActiveNotifs,1)
+            if oldest and oldest.Destroy then
+                oldest:TweenPosition(UDim2.new(1.2,0,1,-20),"In","Quad",0.4,true,function() oldest.Parent:Destroy() end)
             end
         end
+
+        local ScreenGui = Instance.new("ScreenGui")
+        ScreenGui.Parent = game:GetService("CoreGui")
+        local Frame = Instance.new("Frame",ScreenGui)
+        Frame.AnchorPoint = Vector2.new(1,1)
+        Frame.Size = UDim2.new(0,250,0,60)
+        Frame.BackgroundColor3 = Color3.fromRGB(30,30,30)
+        Frame.BackgroundTransparency = 0.1
+        Frame.BorderSizePixel = 0
+        Frame.ClipsDescendants = true
+        Frame.ZIndex = 5
+
+        local Label = Instance.new("TextLabel",Frame)
+        Label.Size = UDim2.new(1,-20,1,-20)
+        Label.Position = UDim2.new(0,10,0,10)
+        Label.BackgroundTransparency = 1
+        Label.Font = Enum.Font.GothamBold
+        Label.TextSize = 14
+        Label.TextColor3 = Color3.fromRGB(255,255,255)
+        Label.Text = "🍕 Thrown Pizza"
+        Label.TextXAlignment = Enum.TextXAlignment.Left
+
+        table.insert(ActiveNotifs,Frame)
+        for i, notif in ipairs(ActiveNotifs) do
+            notif:TweenPosition(UDim2.new(1,-20,1,-20 - ((i-1)*70)),"Out","Quad",0.4,true)
+        end
+
+        -- Auto-remove
+        task.delay(3,function()
+            for i, notif in ipairs(ActiveNotifs) do
+                if notif==Frame then
+                    table.remove(ActiveNotifs,i)
+                    Frame:TweenPosition(UDim2.new(1.2,0,1,-20 - ((i-1)*70)),"In","Quad",0.4,true,function() ScreenGui:Destroy() end)
+                    break
+                end
+            end
+            for j, notif in ipairs(ActiveNotifs) do
+                notif:TweenPosition(UDim2.new(1,-20,1,-20 - ((j-1)*70)),"Out","Quad",0.4,true)
+            end
+        end)
     end
 end
 
-local function triggerMode()
-    local rangeCheck = (activeMode == "Legit")
-    local target = getTarget(rangeCheck)
-    lockOn(target, activeMode=="Not Legit" and 1 or nil)
-end
+--// UI
+local ScreenGui = Instance.new("ScreenGui",LocalPlayer:WaitForChild("PlayerGui"))
+ScreenGui.Name = "PizzaUI"
+local Frame = Instance.new("Frame",ScreenGui)
+Frame.Size = UDim2.new(0,200,0,180)
+Frame.Position = UDim2.new(0.4,0,0.3,0)
+Frame.BackgroundColor3 = Color3.fromRGB(20,20,20)
+Frame.Active = true
+Frame.Draggable = true
 
--- Events
-TriggerBtn.MouseButton1Click:Connect(triggerMode)
+local CloseBtn = Instance.new("TextButton",Frame)
+CloseBtn.Size = UDim2.new(0,180,0,25)
+CloseBtn.Position = UDim2.new(0,10,0,5)
+CloseBtn.Text = "Close"
+CloseBtn.BackgroundColor3 = Color3.fromRGB(150,0,0)
 
-UIS.InputBegan:Connect(function(input,gp)
-    if gp then return end
-    if input.KeyCode == Enum.KeyCode.Q then
-        triggerMode()
+local Status = Instance.new("TextLabel",Frame)
+Status.Size = UDim2.new(0,180,0,25)
+Status.Position = UDim2.new(0,10,0,35)
+Status.Text = "Mode: "..Mode.." | Range: "..Range
+Status.BackgroundTransparency = 1
+Status.TextColor3 = Color3.fromRGB(255,255,255)
+
+local ModeDropdown = Instance.new("TextButton",Frame)
+ModeDropdown.Size = UDim2.new(0,180,0,25)
+ModeDropdown.Position = UDim2.new(0,10,0,65)
+ModeDropdown.Text = "Mode: "..Mode
+
+local RangeDropdown = Instance.new("TextButton",Frame)
+RangeDropdown.Size = UDim2.new(0,180,0,25)
+RangeDropdown.Position = UDim2.new(0,10,0,95)
+RangeDropdown.Text = "Range: "..Range
+
+local TriggerBtn = Instance.new("TextButton",Frame)
+TriggerBtn.Size = UDim2.new(0,180,0,30)
+TriggerBtn.Position = UDim2.new(0,10,0,130)
+TriggerBtn.Text = "Trigger Pizza"
+TriggerBtn.BackgroundColor3 = Color3.fromRGB(0,150,0)
+
+--// UI Logic
+CloseBtn.MouseButton1Click:Connect(function()
+    Frame.Visible = not Frame.Visible
+    CloseBtn.Text = Frame.Visible and "Close" or "Open"
+end)
+
+ModeDropdown.MouseButton1Click:Connect(function()
+    Mode = (Mode=="Legit") and "Auto" or "Legit"
+    ModeDropdown.Text = "Mode: "..Mode
+    Status.Text = "Mode: "..Mode.." | Range: "..Range
+end)
+
+RangeDropdown.MouseButton1Click:Connect(function()
+    local currentIndex = table.find(RangeOptions,Range) or 2
+    local nextIndex = (currentIndex % #RangeOptions) +1
+    Range = RangeOptions[nextIndex]
+    RangeDropdown.Text = "Range: "..Range
+    Status.Text = "Mode: "..Mode.." | Range: "..Range
+end)
+
+TriggerBtn.MouseButton1Click:Connect(function()
+    LastPos = HRP.Position
+    if Mode=="Legit" then
+        local target = GetNearestTarget(15)
+        if target then
+            ThrowPizza(target)
+        end
+    else
+        local target = GetNearestTarget(Range)
+        if target then
+            ThrowPizza(target)
+            task.delay(1,function()
+                if HRP then HRP.CFrame = CFrame.new(LastPos) end
+            end)
+        end
     end
 end)
